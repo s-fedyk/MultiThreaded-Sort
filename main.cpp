@@ -54,31 +54,32 @@ int pthread_barrier_destroy(pthread_barrier * b) {
 }
 
 struct thread_job {
-  const unsigned int start;
-  const unsigned int end;
+  int* list;
+  size_t size;
 };
 
 thread_job **jobs;
 unsigned int numJobs;
-int list[] = {73, 123, 13, 8, 9, 12, 7, 231, 39 ,2, 38};
+int list[] = {73, 123, 13, 8, 9, 12, 7, 231, 39 ,2, 38, 39};
 
 int compare(const void *l, const void *r) {
-  return *((int*)l) < *((int*)r);
+  return ( *(int*)l - *(int*)r );
 }
 
-void phase1(int* list[], size_t size) {
-  qsort(list, sizeof(int), size, &compare);
+void phase1(int list[], size_t size) {
+  qsort(list, size, sizeof(int), compare);
 }
 
 void* psrs(void* arg) {
 
-#ifdef DEBUG
-  std::cout << "Thread initialized! Running psrs..." << std::endl;
-#endif // DEBUG
+  thread_job *job = (thread_job*)arg;
 
 #ifdef DEBUG
-  std::cout << "Job finished... syncing and dying..." << std::endl;
+  std::cout << "Thread initialized! Running psrs... size of " << job->size << std::endl;
 #endif // DEBUG
+  
+  phase1(job->list, job->size - 1);
+
   pthread_barrier_await(&mbarrier);
 
   return NULL;
@@ -101,12 +102,21 @@ int main(int argc, char* argv[]) {
 #ifdef DEBUG
   std::cout << "Creating thread number " << i << std::endl;
 #endif // DEBUG
+    thread_job job;
 
-    pthread_create(&threads[i], NULL, &psrs, NULL);
+    job.size= (sizeof(list)/sizeof(int))/numJobs;
+    job.list = list + job.size * i;
+
+    pthread_create(&threads[i], NULL, &psrs, &job);
   }
 
   cout << "Main thread waiting..." << std::endl;
   pthread_barrier_await(&mbarrier);
+  cout << "Main thread printing..." << std::endl;
+
+  for (size_t i = 0 ; i < sizeof(list)/sizeof(int) ; i ++) {
+    std::cout << list[i] << " ";
+  }
 
   pthread_barrier_destroy(&mbarrier);
   return 1;
