@@ -1,8 +1,11 @@
 #include <iostream>
 #include <mutex>
+#include <cstdlib>
 #include <pthread.h>
 #include <pthread_impl.h>
 #include <sys/_pthread/_pthread_mutex_t.h>
+
+#define DEBUG
 
 using namespace std;
 
@@ -50,47 +53,61 @@ int pthread_barrier_destroy(pthread_barrier * b) {
   return 1;
 }
 
-struct thread_portion {
-  int start;
-  int end;
+struct thread_job {
+  const unsigned int start;
+  const unsigned int end;
 };
 
-void* phase1(void* arg) {
-  return NULL;
+thread_job **jobs;
+unsigned int numJobs;
+int list[] = {73, 123, 13, 8, 9, 12, 7, 231, 39 ,2, 38};
+
+int compare(const void *l, const void *r) {
+  return *((int*)l) < *((int*)r);
 }
 
-void* phase3(void* arg) {
-  return NULL;
+void phase1(int* list[], size_t size) {
+  qsort(list, sizeof(int), size, &compare);
 }
 
-void* test1(void* arg) {
+void* psrs(void* arg) {
 
-  cout << " Test1 thread dying" << "\n";
+#ifdef DEBUG
+  std::cout << "Thread initialized! Running psrs..." << std::endl;
+#endif // DEBUG
+
+#ifdef DEBUG
+  std::cout << "Job finished... syncing and dying..." << std::endl;
+#endif // DEBUG
   pthread_barrier_await(&mbarrier);
 
-  pthread_exit(NULL);
+  return NULL;
 }
-
-void* test2(void* arg) {
-  cout << " Test2 thread dying" << "\n";
-  pthread_barrier_await(&mbarrier);
-
-  pthread_exit(NULL);
-}
-
 
 int main(int argc, char* argv[]) {
-  
-  pthread_barrier_init(&mbarrier, 4);
-  
-  pthread_t thread1, thread2, thread3;
-  pthread_create(&thread1, NULL, &test1, NULL);
-  pthread_create(&thread2, NULL, &test2, NULL);
-  pthread_create(&thread3, NULL, &test2, NULL);
 
+  numJobs = std::stoi(argv[1]);
+
+#ifdef DEBUG
+  std::cout << "Creating " <<  numJobs << " threads" << std::endl;
+#endif // DEBUG
+
+  // + 1, main thread
+  pthread_barrier_init(&mbarrier, numJobs+1);
+  
+  pthread_t threads[numJobs];
+  for (size_t i = 0; i < numJobs ; i++) {
+
+#ifdef DEBUG
+  std::cout << "Creating thread number " << i << std::endl;
+#endif // DEBUG
+
+    pthread_create(&threads[i], NULL, &psrs, NULL);
+  }
+
+  cout << "Main thread waiting..." << std::endl;
   pthread_barrier_await(&mbarrier);
 
-  cout << " main thread dying" << std::endl;
   pthread_barrier_destroy(&mbarrier);
   return 1;
 }
