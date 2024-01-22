@@ -1,2 +1,2 @@
 build:
-	g++ -g -o main main.cpp
+	g++ barrier.cpp main.cpp -o main
