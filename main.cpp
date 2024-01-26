@@ -18,6 +18,8 @@ struct thread_job {
   //phase 1
   int* regularSample;
   size_t index;
+  
+  size_t* partitions;
 };
 
 pthread_barrier mbarrier;
@@ -37,10 +39,8 @@ int compare(const void *l, const void *r) {
   return ( *(int*)l - *(int*)r );
 }
 
-int* phase1(int list[], const size_t size) {
+int* phase1(int list[], const size_t size, int sample[]) {
   qsort(list, size, sizeof(int), compare);
-  
-  int* sample = new int[p];
 
   for (size_t i = 0 ; i < p; i++) {
     sample[i] = list[i*w];
@@ -63,7 +63,7 @@ int* phase2(int gatheredSample[], size_t p) {
 
 void* psrs(void* arg) {
   thread_job *job = (thread_job*)arg;
-  job->regularSample = phase1(job->list, job->size);
+  job->regularSample = phase1(job->list, job->size, job->regularSample);
   // phase 1 finished
   pthread_barrier_await(&mbarrier);
 
@@ -88,27 +88,21 @@ int main(int argc, char* argv[]) {
 
   size_t sampleSize = n/p;
 
+  int* gatheredSample = new int[p * p];
+
   for (size_t i = 0; i < p ; i++) {
     jobs[i].size = sampleSize;
     jobs[i].list = &list[sampleSize*i];
     jobs[i].index = i;
+    jobs[i].regularSample = &gatheredSample[p*i];
     
     pthread_create(&threads[i], NULL, psrs, &jobs[i]);
   }
 
+  // phase 1 end
   pthread_barrier_await(&mbarrier);
-
-  int* gatheredSample = new int[p * p];
-
-
-  // gathering
-  for (size_t i = 0 ; i < p ; i++) {
-    for(size_t x = 0 ; x < p ; x++) {
-      gatheredSample[i*p+x] = jobs[i].regularSample[x];
-    }
-  }
-
-  // sort gathered sample
+  // phase 2 start
+  
   pivots = phase2(gatheredSample, p);
 
   std::cout << "SORTED GATHERED SAMPLE\n";
@@ -117,33 +111,27 @@ int main(int argc, char* argv[]) {
       std::cout << gatheredSample[i*p + x] << " ";
     }
   }
+
   std::cout << "\nPIVOTS AT" << std::endl;
   for (size_t i = 0 ; i < p-1 ;  i ++) {
     std::cout << pivots[i] << " ";
   }
   std::cout << std::endl;
 
+  // phase 2 end
   pthread_barrier_await(&mbarrier);
 
-  for (size_t i = 0; i < p ; i++) {
-    for (size_t x = 0; x < p ; x++) {
-      std::cout << jobs[i].regularSample[x] << " ";
-      if (x+1 >= p) std::cout << "\n";
-    }
-    free(jobs[i].regularSample);
-  }
-
-
-  std::cout << std::endl;
-
+  // phase 3, start
+  // pthread_barrier_await(&mbarrier);
+  // phase 3 end, time to merge
+  
   for (size_t i = 0 ; i < n ; i ++) {
     std::cout << list[i] << " ";
   }
 
-  std::cout << "\n";
-
   pthread_barrier_destroy(&mbarrier);
 
+  free(gatheredSample);
   free(pivots);
   free(threads);
   free(jobs);
