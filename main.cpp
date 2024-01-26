@@ -1,6 +1,7 @@
 #include <iostream>
 #include <mutex>
 #include "barrier.h"
+#include "BinarySearch.h"
 #include <cstdlib>
 #include <pthread.h>
 #include <pthread_impl.h>
@@ -12,14 +13,18 @@
 
 using namespace std;
 
-struct thread_job {
-  int* list;
+
+struct sample_partition {
+  int* base;
   size_t size;
+};
+
+struct thread_job {
   //phase 1
-  int* regularSample;
   size_t index;
   
-  size_t* partitions;
+  // each thread has p partitions which it builds from pivots
+  sample_partition *partitions;
 };
 
 pthread_barrier mbarrier;
@@ -28,10 +33,12 @@ pthread_t* threads;
 // global job list
 thread_job *jobs = nullptr;
 
-size_t n,p,w;
+size_t n,p,w, sampleSize;
 
 // what each processor will pivot off of
-int* pivots;
+int* pivots; 
+// threads contribute to this
+int* gatheredSample;
 
 int list[] = {16, 2, 17, 24, 33, 28, 30, 1, 0, 27, 9, 25, 34, 23, 19, 18, 11, 7, 21, 13, 8, 35, 12, 29, 6, 3, 4, 14, 22, 15, 32, 10, 26, 31, 20, 5};
 
@@ -61,9 +68,13 @@ int* phase2(int gatheredSample[], size_t p) {
   return pivotList;
 }
 
+int phase3(int regularSample[], const size_t size, int pivots[], size_t p) {
+  return 1;
+}
+
 void* psrs(void* arg) {
   thread_job *job = (thread_job*)arg;
-  job->regularSample = phase1(job->list, job->size, job->regularSample);
+  phase1(&list[sampleSize * job->index], sampleSize, &gatheredSample[job->index * p]);
   // phase 1 finished
   pthread_barrier_await(&mbarrier);
 
@@ -74,28 +85,21 @@ void* psrs(void* arg) {
 }
 
 int main(int argc, char* argv[]) {
+
   n = sizeof(list)/sizeof(int);
   p = std::stoi(argv[1]);
   w = n/(pow(p,2));
-
-  std::cout << w << std::endl;
+  sampleSize = n/p;
 
   // + 1, main thread
   pthread_barrier_init(&mbarrier, p+1);
   
   threads = new pthread_t[p];
   jobs = new thread_job[p];
-
-  size_t sampleSize = n/p;
-
-  int* gatheredSample = new int[p * p];
+  gatheredSample = new int[p * p];
 
   for (size_t i = 0; i < p ; i++) {
-    jobs[i].size = sampleSize;
-    jobs[i].list = &list[sampleSize*i];
     jobs[i].index = i;
-    jobs[i].regularSample = &gatheredSample[p*i];
-    
     pthread_create(&threads[i], NULL, psrs, &jobs[i]);
   }
 
@@ -114,7 +118,7 @@ int main(int argc, char* argv[]) {
 
   std::cout << "\nPIVOTS AT" << std::endl;
   for (size_t i = 0 ; i < p-1 ;  i ++) {
-    std::cout << pivots[i] << " ";
+    std::cout << pivots[i] << " |";
   }
   std::cout << std::endl;
 
@@ -128,8 +132,11 @@ int main(int argc, char* argv[]) {
   for (size_t i = 0 ; i < n ; i ++) {
     std::cout << list[i] << " ";
   }
+  std::cout << std::endl;
 
   pthread_barrier_destroy(&mbarrier);
+
+  std::cout << testSearch() << std::endl;
 
   free(gatheredSample);
   free(pivots);
