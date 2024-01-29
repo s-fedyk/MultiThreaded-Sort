@@ -55,12 +55,19 @@ bool testSearch() {
  * Binary search to split array into partitions
  */
 int binarySearch(int list[], const size_t size, const int item) {
+  // bandaid
+  size_t test = 0;
+  while (test < size && list[test] <= item) {
+    test++;
+  }
+  return test;
+
   unsigned int low = 0;
   unsigned int high = size-1;
 
   unsigned int index;
-  while (low < high) {
 
+  while (low < high) {
     index = (low + high)/2;
 
     if (list[index] > item) {
@@ -70,5 +77,5 @@ int binarySearch(int list[], const size_t size, const int item) {
     }
   }
 
-  return std::max(low,high);
+  return low;
 }

@@ -74,7 +74,6 @@ int* phase2(int gatheredSample[], size_t p) {
 }
 
 sample_partition* phase3(int list[], const size_t size, int pivots[], size_t p) {
-  std::cout << "starting phase 3" << std::endl;
   sample_partition *partitions = new sample_partition[p];
   int offset = 0;
   for (size_t i = 0 ; i < p-1 ; i++) {
@@ -144,7 +143,6 @@ void* psrs(void* arg) {
   job->partitions = phase3(&list[sampleSize * job->index], sampleSize, pivots, p);
 
   pthread_barrier_await(&mbarrier);
-  std::cout << "phase 3 ended" << std::endl;
 
   pthread_exit(NULL);
 }
