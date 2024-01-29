@@ -1,5 +1,6 @@
 #include "BinarySearch.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
@@ -21,13 +22,15 @@ bool testSearch() {
   }
 
   qsort(test, 1000, sizeof(int), comp);
-  int test1[1000];
+  int test1[999];
   int removedIndex = rand() % 1000;
   
   size_t x = 0;
   for (int i = 0; i < 1000; i++) {
-    test1[i] = test[i];
-    x++;
+    if (i != removedIndex) {
+      test1[x] = test[i];
+      x++;
+    }
   }
 
   int result = binarySearch(test1, 1000, test[removedIndex]);
@@ -47,21 +50,18 @@ bool testSearch() {
 
   return good;
 }
+
 /**
- * Adapted binary search to find where our item should be placed
+ * Binary search to split array into partitions
  */
 int binarySearch(int list[], const size_t size, const int item) {
-
   unsigned int low = 0;
   unsigned int high = size-1;
 
   unsigned int index;
-  while (low <= high) {
-    index = (low + high)/2;
+  while (low < high) {
 
-    if (list[index] == item) {
-      return index;
-    }
+    index = (low + high)/2;
 
     if (list[index] > item) {
       high = index - 1;
@@ -70,5 +70,5 @@ int binarySearch(int list[], const size_t size, const int item) {
     }
   }
 
-  return index;
+  return std::max(low,high);
 }
