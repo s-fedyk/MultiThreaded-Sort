@@ -12,6 +12,8 @@
 
 #define DEBUG
 
+#define MASTER if (job->index == p-1)
+
 using namespace std;
 
 
@@ -94,14 +96,18 @@ void phase4() {
 
   for (size_t partitionIndex = 0 ; partitionIndex < p ; partitionIndex ++) {
 
-    size_t minThread = 0; 
+    int minThread = -1; 
     size_t partitionSize = 0;
 
     sample_partition toMerge[p];
 
+    std::cout << std::endl;
+    std::cout << "printing partition " << partitionIndex << std::endl;
     for (size_t threadIndex = 0 ; threadIndex < p ; threadIndex++) {
       toMerge[threadIndex] = jobs[threadIndex].partitions[partitionIndex];
-
+      for (size_t i = 0 ; i < toMerge[threadIndex].size ; i ++) {
+        std::cout << toMerge[threadIndex].base[i] << " ";
+      }
       partitionSize += toMerge[threadIndex].size;
     }
 
@@ -109,23 +115,31 @@ void phase4() {
     memset(indexes, 0x0, p*sizeof(size_t));
 
     for (size_t i = 0 ; i < partitionSize ; i++) {
-      minThread = 0;
+      std::cout << i << std::endl;
+      minThread = -1;
       for (size_t threadIndex = 0 ; threadIndex < p ; threadIndex++) {
         // fully merged this sublist
         if (toMerge[threadIndex].size == indexes[threadIndex]) continue;
-
-        // the value of the current minimum value
-        int currentMin = toMerge[minThread].base[indexes[minThread]];
+  
         int currentObservation = toMerge[threadIndex].base[indexes[threadIndex]];
-
-        if (currentObservation < currentMin) {
+        
+        // no minimum, first thread we've seen
+        if (minThread < 0) { 
           minThread = threadIndex;
+        } else {
+          int currentMin = toMerge[minThread].base[indexes[minThread]];
+          if (currentObservation < currentMin) {
+            minThread = threadIndex;
+          }
+
         }
       }
-
-      dest[resultIndex] = toMerge[minThread].base[indexes[minThread]];
-      resultIndex++;
-      indexes[minThread]++;
+  
+      if (minThread >= 0) {
+        dest[resultIndex] = toMerge[minThread].base[indexes[minThread]];
+        resultIndex++;
+        indexes[minThread]++;
+      }
     }
   }
 }
@@ -194,12 +208,9 @@ int main(int argc, char* argv[]) {
   // phase 3 end, time to merge
   for (size_t i = 0 ; i < p ; i ++) {
     thread_job currentJob = jobs[i];
-    std::cout << "Thread " << i << std::endl;
     for (size_t x = 0 ; x < p ; x++) {
       sample_partition currentPartition = currentJob.partitions[x];
       
-      std::cout << "Partition " << x << std::endl;
-
       for (size_t z = 0 ; z < currentPartition.size ; z++) {
         std::cout << currentPartition.base[z] << " ";
       }
@@ -212,7 +223,8 @@ int main(int argc, char* argv[]) {
   pthread_barrier_destroy(&mbarrier);
 
   phase4();
-
+  
+  std::cout << std::endl;
   for (size_t i = 0 ; i < n ; i++) {
     std::cout << dest[i] << " ";
   }
