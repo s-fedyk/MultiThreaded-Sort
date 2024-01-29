@@ -151,12 +151,31 @@ void* psrs(void* arg) {
   // phase 1 finished
   pthread_barrier_await(&mbarrier);
 
-  // phase 2, main processor sorting regular sample
+  MASTER {
+    pivots = phase2(gatheredSample, p);
+  }
+
   pthread_barrier_await(&mbarrier);
 
   job->partitions = phase3(&list[sampleSize * job->index], sampleSize, pivots, p);
 
   pthread_barrier_await(&mbarrier);
+
+  MASTER {
+    phase4();
+
+
+    for (size_t i = 0 ; i < n ; i++) {
+      std::cout << dest[i] << " ";
+    }
+    std::cout << std::endl;
+
+    free(dest);
+    free(gatheredSample);
+    free(pivots);
+    free(threads);
+    free(jobs);
+  }
 
   pthread_exit(NULL);
 }
@@ -171,70 +190,19 @@ int main(int argc, char* argv[]) {
   dest = new int[n];
 
   // + 1, main thread
-  pthread_barrier_init(&mbarrier, p+1);
+  pthread_barrier_init(&mbarrier, p);
   
   threads = new pthread_t[p];
   jobs = new thread_job[p];
   gatheredSample = new int[p * p];
 
-  for (size_t i = 0; i < p ; i++) {
+  for (size_t i = 0; i < p-1 ; i++) {
     jobs[i].index = i;
     pthread_create(&threads[i], NULL, psrs, &jobs[i]);
   }
 
-  // phase 1 end
-  pthread_barrier_await(&mbarrier);
-  // phase 2 start
-  
-  pivots = phase2(gatheredSample, p);
-
-  std::cout << "SORTED GATHERED SAMPLE\n";
-  for (size_t i = 0 ; i < p ; i++) {
-    for(size_t x = 0 ; x < p ; x++) {
-      std::cout << gatheredSample[i*p + x] << " ";
-    }
-  }
-
-  std::cout << "\nPIVOTS AT" << std::endl;
-  for (size_t i = 0 ; i < p-1 ;  i ++) {
-    std::cout << pivots[i] << " | ";
-  }
-  std::cout << std::endl;
-
-  // phase 2 end
-  pthread_barrier_await(&mbarrier);
-  // phase 3, start
-  pthread_barrier_await(&mbarrier);
-  // phase 3 end, time to merge
-  for (size_t i = 0 ; i < p ; i ++) {
-    thread_job currentJob = jobs[i];
-    for (size_t x = 0 ; x < p ; x++) {
-      sample_partition currentPartition = currentJob.partitions[x];
-      
-      for (size_t z = 0 ; z < currentPartition.size ; z++) {
-        std::cout << currentPartition.base[z] << " ";
-      }
-      
-      std::cout << std::endl;
-    }
-  }
-  std::cout << std::endl;
-
-  pthread_barrier_destroy(&mbarrier);
-
-  phase4();
-  
-  std::cout << std::endl;
-  for (size_t i = 0 ; i < n ; i++) {
-    std::cout << dest[i] << " ";
-  }
-  std::cout << std::endl;
-
-  free(gatheredSample);
-  free(pivots);
-  free(threads);
-  free(jobs);
+  jobs[p-1].index = p-1;
+  psrs(&jobs[p-1]);
 
   return 1;
 }
-
