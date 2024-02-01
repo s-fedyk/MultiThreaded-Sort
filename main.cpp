@@ -1,4 +1,6 @@
+#include <__chrono/duration.h>
 #include <algorithm>
+#include <chrono>
 #include <iostream>
 #include <mutex>
 #include "barrier.h"
@@ -38,6 +40,7 @@ pthread_t* threads;
 thread_job *jobs = nullptr;
 
 size_t n,p,w, sampleSize, leftOver;
+chrono::time_point<chrono::steady_clock> start;
 
 // what each processor will pivot off of
 int* pivots;
@@ -141,6 +144,16 @@ void phase4() {
 
 void* psrs(void* arg) {
   thread_job *job = (thread_job*)arg;
+
+
+  //start timing after everyone reaches barrier
+  pthread_barrier_await(&mbarrier);
+  MASTER {
+    start = chrono::high_resolution_clock::now();
+  }
+  pthread_barrier_await(&mbarrier);
+
+
   
   size_t mSampleSize = sampleSize;
 
@@ -167,6 +180,11 @@ void* psrs(void* arg) {
 
   MASTER {
     phase4();
+  
+    auto end = chrono::high_resolution_clock::now();
+    auto elapsed = chrono::duration_cast<chrono::microseconds>(end-start);
+
+    std::cout << elapsed.count() << std::endl;
 
     /*
     std::cout << checkSorted(dest, n) << std::endl;
@@ -184,9 +202,11 @@ void* psrs(void* arg) {
 }
 
 int main(int argc, char* argv[]) {
-  n = 10000000;
+  n = std::stoi(argv[1]);
+  p = std::stoi(argv[2]);
+
   list = generate(n);
-  p = std::stoi(argv[1]);
+
   w = n/(pow(p,2));
   sampleSize = n/p;
   leftOver = n%p;
