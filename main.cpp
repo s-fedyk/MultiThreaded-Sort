@@ -197,10 +197,6 @@ void* psrs(void* arg) {
   
     gettimeofday(&psrsEnd, NULL);
 
-    /*
-    std::cout << checkSorted(dest, n) << std::endl;
-    std::cout << checkElements(dest, list, n) << std::endl;
-    */
     long psrsElapsed = (psrsEnd.tv_sec-psrsStart.tv_sec)*1000000 + psrsEnd.tv_usec-psrsStart.tv_usec;
     long p1Elapsed = (p1End.tv_sec-p1Start.tv_sec)*1000000 + p1End.tv_usec-p1Start.tv_usec;
     long p2Elapsed = (p2End.tv_sec-p2Start.tv_sec)*1000000 + p2End.tv_usec-p2Start.tv_usec;
@@ -208,6 +204,10 @@ void* psrs(void* arg) {
     long p4Elapsed = (p4End.tv_sec-p4Start.tv_sec)*1000000 + p4End.tv_usec-p4Start.tv_usec;
 
     std::cout << psrsElapsed << "," << p1Elapsed << "," <<p2Elapsed << "," << p3Elapsed << "," << p4Elapsed << std::endl;
+    /*
+    std::cout << checkSorted(dest, n) << std::endl;
+    std::cout << checkElements(dest, list, n) << std::endl;
+    */
 
     free(dest);
     free(gatheredSample);
