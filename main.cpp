@@ -11,6 +11,8 @@
 #include <pthread_impl.h>
 #include <sys/_pthread/_pthread_mutex_t.h>
 #include <signal.h>
+#include <sys/_types/_timeval.h>
+#include <sys/time.h>
 #include <sys/signal.h>
 
 #define DEBUG
@@ -19,17 +21,13 @@
 
 using namespace std;
 
-
 struct sample_partition {
   int* base;
   size_t size;
 };
 
 struct thread_job {
-  //phase 1
   size_t index;
-  
-  // each thread has p partitions which it builds from pivots
   sample_partition *partitions;
 };
 
@@ -42,7 +40,10 @@ thread_job *jobs = nullptr;
 size_t n,p,w, sampleSize, leftOver;
 chrono::time_point<chrono::steady_clock> start;
 
-// what each processor will pivot off of
+timeval psrsStart, psrsEnd, p1Start, 
+        p1End, p2Start, p2End, p3Start, 
+        p3End, p4Start, p4End;
+
 int* pivots;
 
 // threads contribute to this
@@ -99,7 +100,6 @@ void phase4() {
   size_t resultIndex = 0;
 
   for (size_t partitionIndex = 0 ; partitionIndex < p ; partitionIndex ++) {
-
     int minThread = -1; 
     size_t partitionSize = 0;
 
@@ -145,18 +145,15 @@ void phase4() {
 void* psrs(void* arg) {
   thread_job *job = (thread_job*)arg;
 
-
-  //start timing after everyone reaches barrier
+  //start timing p1 everyone reaches barrier
   pthread_barrier_await(&mbarrier);
   MASTER {
-    start = chrono::high_resolution_clock::now();
+    gettimeofday(&psrsStart, NULL);
+    gettimeofday(&p1Start, NULL);
   }
+
   pthread_barrier_await(&mbarrier);
-
-
   
-  size_t mSampleSize = sampleSize;
-
   // first n%p threads will take 1 more 
   size_t sampleAdjust = (job->index < leftOver) ? 1 : 0;
 
@@ -167,29 +164,50 @@ void* psrs(void* arg) {
 
   // phase 1 finished
   pthread_barrier_await(&mbarrier);
+  MASTER {
+    gettimeofday(&p1End, NULL);
+  }
+  pthread_barrier_await(&mbarrier);
+
+
 
   MASTER {
+    gettimeofday(&p2Start, NULL);
     pivots = phase2(gatheredSample, p);
+    gettimeofday(&p2End, NULL);
   }
 
+  pthread_barrier_await(&mbarrier);
+  MASTER {
+    gettimeofday(&p3Start, NULL);
+  }
   pthread_barrier_await(&mbarrier);
 
   job->partitions = phase3(&list[sampleSize * job->index + startAdjust], sampleSize+sampleAdjust, pivots, p);
 
   pthread_barrier_await(&mbarrier);
+  gettimeofday(&p3End, NULL);
+  pthread_barrier_await(&mbarrier);
+
 
   MASTER {
+    gettimeofday(&p4Start, NULL);
     phase4();
+    gettimeofday(&p4End, NULL);
   
-    auto end = chrono::high_resolution_clock::now();
-    auto elapsed = chrono::duration_cast<chrono::microseconds>(end-start);
-
-    std::cout << elapsed.count() << std::endl;
+    gettimeofday(&psrsEnd, NULL);
 
     /*
     std::cout << checkSorted(dest, n) << std::endl;
     std::cout << checkElements(dest, list, n) << std::endl;
     */
+    long psrsElapsed = (psrsEnd.tv_sec-psrsStart.tv_sec)*1000000 + psrsEnd.tv_usec-psrsStart.tv_usec;
+    long p1Elapsed = (p1End.tv_sec-p1Start.tv_sec)*1000000 + p1End.tv_usec-p1Start.tv_usec;
+    long p2Elapsed = (p2End.tv_sec-p2Start.tv_sec)*1000000 + p2End.tv_usec-p2Start.tv_usec;
+    long p3Elapsed = (p3End.tv_sec-p3Start.tv_sec)*1000000 + p3End.tv_usec-p3Start.tv_usec;
+    long p4Elapsed = (p4End.tv_sec-p4Start.tv_sec)*1000000 + p4End.tv_usec-p4Start.tv_usec;
+
+    std::cout << psrsElapsed << "," << p1Elapsed << "," <<p2Elapsed << "," << p3Elapsed << "," << p4Elapsed << std::endl;
 
     free(dest);
     free(gatheredSample);
@@ -213,7 +231,6 @@ int main(int argc, char* argv[]) {
   
   dest = new int[n];
 
-  // + 1, main thread
   pthread_barrier_init(&mbarrier, p);
   
   threads = new pthread_t[p];
