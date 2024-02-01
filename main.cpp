@@ -3,6 +3,7 @@
 #include <mutex>
 #include "barrier.h"
 #include "BinarySearch.h"
+#include "tester.h"
 #include <cstdlib>
 #include <pthread.h>
 #include <pthread_impl.h>
@@ -36,7 +37,7 @@ pthread_t* threads;
 // global job list
 thread_job *jobs = nullptr;
 
-size_t n,p,w, sampleSize;
+size_t n,p,w, sampleSize, leftOver;
 
 // what each processor will pivot off of
 int* pivots;
@@ -44,7 +45,7 @@ int* pivots;
 // threads contribute to this
 int* gatheredSample;
 
-int list[] = {16, 2, 17, 24, 33, 28, 30, 1, 0, 27, 9, 25, 34, 23, 19, 18, 11, 7, 21, 13, 8, 35, 12, 29, 6, 3, 4, 14, 22, 15, 32, 10, 26, 31, 20, 5};
+int *list;
 
 // where our result goes
 int* dest;
@@ -101,13 +102,8 @@ void phase4() {
 
     sample_partition toMerge[p];
 
-    std::cout << std::endl;
-    std::cout << "printing partition " << partitionIndex << std::endl;
     for (size_t threadIndex = 0 ; threadIndex < p ; threadIndex++) {
       toMerge[threadIndex] = jobs[threadIndex].partitions[partitionIndex];
-      for (size_t i = 0 ; i < toMerge[threadIndex].size ; i ++) {
-        std::cout << toMerge[threadIndex].base[i] << " ";
-      }
       partitionSize += toMerge[threadIndex].size;
     }
 
@@ -115,7 +111,6 @@ void phase4() {
     memset(indexes, 0x0, p*sizeof(size_t));
 
     for (size_t i = 0 ; i < partitionSize ; i++) {
-      std::cout << i << std::endl;
       minThread = -1;
       for (size_t threadIndex = 0 ; threadIndex < p ; threadIndex++) {
         // fully merged this sublist
@@ -146,7 +141,16 @@ void phase4() {
 
 void* psrs(void* arg) {
   thread_job *job = (thread_job*)arg;
-  phase1(&list[sampleSize * job->index], sampleSize, &gatheredSample[job->index * p]);
+  
+  size_t mSampleSize = sampleSize;
+
+  // first n%p threads will take 1 more 
+  size_t sampleAdjust = (job->index < leftOver) ? 1 : 0;
+
+  // adjust bounds for n%p threds
+  size_t startAdjust = (job->index < leftOver) ? job->index : leftOver;
+
+  phase1(&list[sampleSize * job->index + startAdjust], sampleSize + sampleAdjust, &gatheredSample[job->index * p]);
 
   // phase 1 finished
   pthread_barrier_await(&mbarrier);
@@ -157,18 +161,17 @@ void* psrs(void* arg) {
 
   pthread_barrier_await(&mbarrier);
 
-  job->partitions = phase3(&list[sampleSize * job->index], sampleSize, pivots, p);
+  job->partitions = phase3(&list[sampleSize * job->index + startAdjust], sampleSize+sampleAdjust, pivots, p);
 
   pthread_barrier_await(&mbarrier);
 
   MASTER {
     phase4();
 
-
-    for (size_t i = 0 ; i < n ; i++) {
-      std::cout << dest[i] << " ";
-    }
-    std::cout << std::endl;
+    /*
+    std::cout << checkSorted(dest, n) << std::endl;
+    std::cout << checkElements(dest, list, n) << std::endl;
+    */
 
     free(dest);
     free(gatheredSample);
@@ -181,12 +184,13 @@ void* psrs(void* arg) {
 }
 
 int main(int argc, char* argv[]) {
-
-  n = sizeof(list)/sizeof(int);
+  n = 10000000;
+  list = generate(n);
   p = std::stoi(argv[1]);
   w = n/(pow(p,2));
   sampleSize = n/p;
-
+  leftOver = n%p;
+  
   dest = new int[n];
 
   // + 1, main thread
