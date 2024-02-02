@@ -37,7 +37,8 @@ pthread_t* threads;
 // global job list
 thread_job *jobs = nullptr;
 
-size_t n,p,w, sampleSize, leftOver;
+size_t p,w, sampleSize, leftOver;
+long n;
 chrono::time_point<chrono::steady_clock> start;
 
 timeval psrsStart, psrsEnd, p1Start, 
@@ -217,7 +218,7 @@ void* psrs(void* arg) {
 }
 
 int main(int argc, char* argv[]) {
-  n = std::stoi(argv[1]);
+  n = std::stol(argv[1]);
   p = std::stoi(argv[2]);
 
   list = generate(n);
