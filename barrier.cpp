@@ -3,14 +3,14 @@
 #include <iostream>
 
 // var null to fit pthread impl, even though i don't fully do it
-int pthread_barrier_init(pthread_barrier * b, void* null, const int conditionCount) {
+int pthread_barrier_init(pthread_barrier_t * b, void* null, const int conditionCount) {
 
   b->conditionCount = conditionCount;
   b->waitingCount = 0;
   return !pthread_mutex_init(&b->lock, 0) && !pthread_cond_init(&b->cond, 0);
 };
 
-int pthread_barrier_await(pthread_barrier * b) {
+int pthread_barrier_wait(pthread_barrier_t * b) {
   pthread_mutex_lock(&b->lock);
   b->waitingCount += 1;
 
@@ -28,7 +28,7 @@ int pthread_barrier_await(pthread_barrier * b) {
   return 1;
 }
 
-int pthread_barrier_destroy(pthread_barrier * b) {
+int pthread_barrier_destroy(pthread_barrier_t * b) {
   pthread_cond_destroy(&b->cond);
   pthread_mutex_destroy(&b->lock);
 

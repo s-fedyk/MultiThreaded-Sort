@@ -31,7 +31,7 @@ struct thread_job {
   sample_partition *partitions;
 };
 
-pthread_barrier mbarrier;
+pthread_barrier_t mbarrier;
 pthread_t* threads;
 
 // global job list
@@ -146,13 +146,13 @@ void* psrs(void* arg) {
   thread_job *job = (thread_job*)arg;
 
   //start timing p1 everyone reaches barrier
-  pthread_barrier_await(&mbarrier);
+  pthread_barrier_wait(&mbarrier);
   MASTER {
     gettimeofday(&psrsStart, NULL);
     gettimeofday(&p1Start, NULL);
   }
 
-  pthread_barrier_await(&mbarrier);
+  pthread_barrier_wait(&mbarrier);
   
   // first n%p threads will take 1 more 
   size_t sampleAdjust = (job->index < leftOver) ? 1 : 0;
@@ -163,11 +163,11 @@ void* psrs(void* arg) {
   phase1(&list[sampleSize * job->index + startAdjust], sampleSize + sampleAdjust, &gatheredSample[job->index * p]);
 
   // phase 1 finished
-  pthread_barrier_await(&mbarrier);
+  pthread_barrier_wait(&mbarrier);
   MASTER {
     gettimeofday(&p1End, NULL);
   }
-  pthread_barrier_await(&mbarrier);
+  pthread_barrier_wait(&mbarrier);
 
   MASTER {
     gettimeofday(&p2Start, NULL);
@@ -175,17 +175,17 @@ void* psrs(void* arg) {
     gettimeofday(&p2End, NULL);
   }
 
-  pthread_barrier_await(&mbarrier);
+  pthread_barrier_wait(&mbarrier);
   MASTER {
     gettimeofday(&p3Start, NULL);
   }
-  pthread_barrier_await(&mbarrier);
+  pthread_barrier_wait(&mbarrier);
 
   job->partitions = phase3(&list[sampleSize * job->index + startAdjust], sampleSize+sampleAdjust, pivots, p);
 
-  pthread_barrier_await(&mbarrier);
+  pthread_barrier_wait(&mbarrier);
   gettimeofday(&p3End, NULL);
-  pthread_barrier_await(&mbarrier);
+  pthread_barrier_wait(&mbarrier);
 
   MASTER {
     gettimeofday(&p4Start, NULL);
