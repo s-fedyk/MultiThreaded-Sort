@@ -1,8 +1,6 @@
 #pragma once
 
 #include <pthread.h>
-#include <pthread_impl.h>
-#include <sys/_pthread/_pthread_mutex_t.h>
 
 struct pthread_barrier {
   int waitingCount;

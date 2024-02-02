@@ -1,17 +1,14 @@
-#include <__chrono/duration.h>
 #include <algorithm>
 #include <chrono>
 #include <iostream>
+#include <cstring>
+#include <math.h>
 #include <mutex>
-#include "barrier.h"
 #include "BinarySearch.h"
 #include "tester.h"
 #include <cstdlib>
 #include <pthread.h>
-#include <pthread_impl.h>
-#include <sys/_pthread/_pthread_mutex_t.h>
 #include <signal.h>
-#include <sys/_types/_timeval.h>
 #include <sys/time.h>
 #include <sys/signal.h>
 
