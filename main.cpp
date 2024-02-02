@@ -4,6 +4,9 @@
 #include <cstring>
 #include <math.h>
 #include <mutex>
+#ifdef __APPLE__
+#include "barrier.h"
+#endif
 #include "BinarySearch.h"
 #include "tester.h"
 #include <cstdlib>
@@ -225,7 +228,7 @@ int main(int argc, char* argv[]) {
   
   dest = new int[n];
 
-  pthread_barrier_init(&mbarrier, p);
+  pthread_barrier_init(&mbarrier,NULL, p);
   
   threads = new pthread_t[p];
   jobs = new thread_job[p];

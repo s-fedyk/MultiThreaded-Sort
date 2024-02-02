@@ -1,7 +1,9 @@
+#ifdef __APPLE__
 #include "barrier.h"
 #include <iostream>
 
-int pthread_barrier_init(pthread_barrier * b, const int conditionCount) {
+// var null to fit pthread impl, even though i don't fully do it
+int pthread_barrier_init(pthread_barrier * b, void* null, const int conditionCount) {
 
   b->conditionCount = conditionCount;
   b->waitingCount = 0;
@@ -32,3 +34,4 @@ int pthread_barrier_destroy(pthread_barrier * b) {
 
   return 1;
 }
+#endif
