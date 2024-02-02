@@ -1,5 +1,8 @@
 #!/bin/bash
 i=1000000
+rm -rf "./results"
+mkdir "results"
+
 while ((i<1000000 * 2**8)); do 
   # 5 runs per each
   x=2
@@ -26,7 +29,7 @@ while ((i<1000000 * 2**8)); do
     p3avg=$(($p3sum/5))
     p4avg=$(($p4sum/5))
 
-  echo "psrs: $psrsavg phase1 $p1avg phase2 $p2avg phase3 $p3avg phase4 $p4avg" >> "$x-processors-$i"
+    echo "psrs: $psrsavg phase1 $p1avg phase2 $p2avg phase3 $p3avg phase4 $p4avg" >> "results/$x-processors-$i"
   ((x=x*2))
   done
 
