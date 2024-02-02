@@ -2,7 +2,6 @@
 #include <iostream>
 #include "tester.h"
 #include <sys/time.h>
-#include <sys/_types/_timeval.h>
 #include <sys/select.h>
 
 using namespace std;
