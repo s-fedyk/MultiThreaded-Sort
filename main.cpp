@@ -169,8 +169,6 @@ void* psrs(void* arg) {
   }
   pthread_barrier_await(&mbarrier);
 
-
-
   MASTER {
     gettimeofday(&p2Start, NULL);
     pivots = phase2(gatheredSample, p);
@@ -188,7 +186,6 @@ void* psrs(void* arg) {
   pthread_barrier_await(&mbarrier);
   gettimeofday(&p3End, NULL);
   pthread_barrier_await(&mbarrier);
-
 
   MASTER {
     gettimeofday(&p4Start, NULL);

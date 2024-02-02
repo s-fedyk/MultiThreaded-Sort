@@ -1,27 +1,32 @@
 #!/bin/bash
 i=1000000
-while ((i<10000000000)); do 
-
+while ((i<1000000 * 2**8)); do 
   # 5 runs per each
-  psrsSum=0
-  p1Sum=0;
-  p2Sum=0
-  p3Sum=0
-  p4Sum=0
-  for ((x=0 ; x<5 ; x++)); do 
-    output=$(./main $i 4)
+  x=4
+  while ((x < 128)); do 
+    psrssum=0
+    p1sum=0
+    p2sum=0
+    p3sum=0
+    p4sum=0
+   
+    output=$(./main $i $x)
 
-    psrsSum=$(($(echo "$output" | awk -F',' '{s+=$1} END {print s}')+$psrsSum))
-    p1Sum=$(($(echo "$output" | awk -F',' '{s+=$2} END {print s}')+$p1Sum))
-    p2Sum=$(($(echo "$output" | awk -F',' '{s+=$3} END {print s}')+$p2Sum))
-    p3Sum=$(($(echo "$output" | awk -F',' '{s+=$4} END {print s}')+$p3Sum))
-    p4Sum=$(($(echo "$output" | awk -F',' '{s+=$5} END {print s}')+$p4Sum))
+    psrssum=$(($(echo "$output" | awk -F',' '{s+=$1} END {print s}')+$psrssum))
+    p1sum=$(($(echo "$output" | awk -F',' '{s+=$2} END {print s}')+$p1sum))
+    p2sum=$(($(echo "$output" | awk -F',' '{s+=$3} END {print s}')+$p2sum))
+    p3sum=$(($(echo "$output" | awk -F',' '{s+=$4} END {print s}')+$p3sum))
+    p4sum=$(($(echo "$output" | awk -F',' '{s+=$5} END {print s}')+$p4sum))
+    
+    psrsavg=$(($psrssum/5))
+    p1avg=$(($p1sum/5))
+    p2avg=$(($p2sum/5))
+    p3avg=$(($p3sum/5))
+    p4avg=$(($p4sum/5))
+
+  echo "psrs: $psrsavg phase1 $p1avg phase2 $p2avg phase3 $p3avg phase4 $p4avg" >> "$x-processors-$i"
+  ((x=x**2))
   done
-  echo $psrsSum
-  echo $p1Sum
-  echo $p2Sum
-  echo $p3Sum
-  echo $p4Sum
 
-  ((i*=10))
+  ((i*=2))
 done
