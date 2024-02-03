@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <chrono>
+#include <cstdio>
 #include <iostream>
 #include <cstring>
 #include <math.h>
@@ -29,6 +30,7 @@ struct sample_partition {
 struct thread_job {
   size_t index;
   sample_partition *partitions;
+  size_t partitionSize;
 };
 
 pthread_barrier_t mbarrier;
@@ -97,48 +99,50 @@ sample_partition* phase3(int list[], const size_t size, int pivots[], size_t p) 
 }
 
 // use sample partitions to merge
-void phase4() {
+void phase4(size_t partitionIndex) {
+  sample_partition toMerge[p];
+  size_t partitionSize = 0;
+
+  for (size_t threadIndex = 0 ; threadIndex < p ; threadIndex++) {
+    toMerge[threadIndex] = jobs[threadIndex].partitions[partitionIndex];
+    partitionSize += toMerge[threadIndex].size;
+  }
+
+  jobs[partitionIndex].partitionSize = partitionSize;
+  pthread_barrier_wait(&mbarrier);
+
   size_t resultIndex = 0;
+  for (size_t threadIndex = 0 ; threadIndex < partitionIndex ; threadIndex++) {
+    resultIndex += jobs[threadIndex].partitionSize;
+  }
 
-  for (size_t partitionIndex = 0 ; partitionIndex < p ; partitionIndex ++) {
-    int minThread = -1; 
-    size_t partitionSize = 0;
+  size_t indexes[p]; // we are merging this many partitions
+  memset(indexes, 0x0, p*sizeof(size_t));
 
-    sample_partition toMerge[p];
-
+  int minThread = -1; 
+  for (size_t i = 0 ; i < partitionSize ; i++) {
+    minThread = -1;
     for (size_t threadIndex = 0 ; threadIndex < p ; threadIndex++) {
-      toMerge[threadIndex] = jobs[threadIndex].partitions[partitionIndex];
-      partitionSize += toMerge[threadIndex].size;
-    }
+      // fully merged this sublist
+      if (toMerge[threadIndex].size == indexes[threadIndex]) continue;
 
-    size_t indexes[p]; // we are merging this many partitions
-    memset(indexes, 0x0, p*sizeof(size_t));
-
-    for (size_t i = 0 ; i < partitionSize ; i++) {
-      minThread = -1;
-      for (size_t threadIndex = 0 ; threadIndex < p ; threadIndex++) {
-        // fully merged this sublist
-        if (toMerge[threadIndex].size == indexes[threadIndex]) continue;
-  
-        int currentObservation = toMerge[threadIndex].base[indexes[threadIndex]];
-        
-        // no minimum, first thread we've seen
-        if (minThread < 0) { 
+      int currentObservation = toMerge[threadIndex].base[indexes[threadIndex]];
+      
+      // no minimum, first thread we've seen
+      if (minThread < 0) { 
+        minThread = threadIndex;
+      } else {
+        int currentMin = toMerge[minThread].base[indexes[minThread]];
+        if (currentObservation < currentMin) {
           minThread = threadIndex;
-        } else {
-          int currentMin = toMerge[minThread].base[indexes[minThread]];
-          if (currentObservation < currentMin) {
-            minThread = threadIndex;
-          }
-
         }
       }
-  
-      if (minThread >= 0) {
-        dest[resultIndex] = toMerge[minThread].base[indexes[minThread]];
-        resultIndex++;
-        indexes[minThread]++;
-      }
+    }
+
+    if (minThread >= 0) {
+      dest[resultIndex] = toMerge[minThread].base[indexes[minThread]];
+      resultIndex++;
+      indexes[minThread]++;
     }
   }
 }
@@ -185,14 +189,17 @@ void* psrs(void* arg) {
   job->partitions = phase3(&list[sampleSize * job->index + startAdjust], sampleSize+sampleAdjust, pivots, p);
 
   pthread_barrier_wait(&mbarrier);
-  gettimeofday(&p3End, NULL);
+  MASTER {
+    gettimeofday(&p3End, NULL);
+    gettimeofday(&p4Start, NULL);
+  }
   pthread_barrier_wait(&mbarrier);
 
+  phase4(job->index);
+
+  pthread_barrier_wait(&mbarrier);
   MASTER {
-    gettimeofday(&p4Start, NULL);
-    phase4();
     gettimeofday(&p4End, NULL);
-  
     gettimeofday(&psrsEnd, NULL);
 
     long psrsElapsed = (psrsEnd.tv_sec-psrsStart.tv_sec)*1000000 + psrsEnd.tv_usec-psrsStart.tv_usec;
@@ -220,7 +227,6 @@ void* psrs(void* arg) {
 int main(int argc, char* argv[]) {
   n = std::stol(argv[1]);
   p = std::stoi(argv[2]);
-
   list = generate(n);
 
   w = n/(pow(p,2));
