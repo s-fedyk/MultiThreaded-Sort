@@ -7,7 +7,7 @@ mkdir "results"
 while ((i<start*2**6)); do 
   # 5 runs per each
   x=2
-  while ((x < 128)); do 
+  while ((x <= 128)); do 
     psrssum=0
     p1sum=0
     p2sum=0
