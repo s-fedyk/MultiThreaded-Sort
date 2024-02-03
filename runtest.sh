@@ -1,9 +1,10 @@
 #!/bin/bash
-i=100000000
+start=512000000
+i=start
 rm -rf "./results"
 mkdir "results"
 
-while ((i<100000000 * 10**6)); do 
+while ((i<start*2**6)); do 
   # 5 runs per each
   x=2
   while ((x < 128)); do 
@@ -32,5 +33,5 @@ while ((i<100000000 * 10**6)); do
     echo "psrs: $psrsavg phase1 $p1avg phase2 $p2avg phase3 $p3avg phase4 $p4avg" >> "results/$x-processors-$i"
     ((x=x*2))
   done
-  ((i=i*10))
+  ((i=i*2))
 done
