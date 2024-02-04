@@ -1,10 +1,8 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
-#include <functional>
 #include <iostream>
 #include <cstring>
-#include <list>
 #include <math.h>
 #include <mutex>
 #ifdef __APPLE__
@@ -54,7 +52,7 @@ int* pivots;
 // threads contribute to this
 int* gatheredSample;
 
-int *mlist;
+int *list;
 
 // where our result goes
 int* dest;
@@ -122,25 +120,30 @@ void phase4(size_t partitionIndex) {
   memset(indexes, 0x0, p*sizeof(size_t));
 
   int minThread = -1; 
-  std::vector<int> heap;
-  heap.reserve(partitionSize);
-  std::make_heap(heap.begin(), heap.end(), std::greater<int>());
-
   for (size_t i = 0 ; i < partitionSize ; i++) {
+    minThread = -1;
     for (size_t threadIndex = 0 ; threadIndex < p ; threadIndex++) {
+      // fully merged this sublist
       if (toMerge[threadIndex].size == indexes[threadIndex]) continue;
 
-      heap.push_back(toMerge[threadIndex].base[indexes[threadIndex]]);
-      push_heap(heap.begin(), heap.end(), std::greater<int>());
-      indexes[threadIndex]++;
+      int currentObservation = toMerge[threadIndex].base[indexes[threadIndex]];
+      
+      // no minimum, first thread we've seen
+      if (minThread < 0) { 
+        minThread = threadIndex;
+      } else {
+        int currentMin = toMerge[minThread].base[indexes[minThread]];
+        if (currentObservation < currentMin) {
+          minThread = threadIndex;
+        }
+      }
     }
-  }
 
-  while (!heap.empty()) {
-    pop_heap(heap.begin(), heap.end(), std::greater<int>());
-    dest[resultIndex] = heap.back();
-    heap.pop_back();
-    resultIndex++;
+    if (minThread >= 0) {
+      dest[resultIndex] = toMerge[minThread].base[indexes[minThread]];
+      resultIndex++;
+      indexes[minThread]++;
+    }
   }
 }
 
@@ -162,7 +165,7 @@ void* psrs(void* arg) {
   // adjust bounds for n%p threds
   size_t startAdjust = (job->index < leftOver) ? job->index : leftOver;
 
-  phase1(&mlist[sampleSize * job->index + startAdjust], sampleSize + sampleAdjust, &gatheredSample[job->index * p]);
+  phase1(&list[sampleSize * job->index + startAdjust], sampleSize + sampleAdjust, &gatheredSample[job->index * p]);
 
   // phase 1 finished
   pthread_barrier_wait(&mbarrier);
@@ -183,7 +186,7 @@ void* psrs(void* arg) {
   }
   pthread_barrier_wait(&mbarrier);
 
-  job->partitions = phase3(&mlist[sampleSize * job->index + startAdjust], sampleSize+sampleAdjust, pivots, p);
+  job->partitions = phase3(&list[sampleSize * job->index + startAdjust], sampleSize+sampleAdjust, pivots, p);
 
   pthread_barrier_wait(&mbarrier);
   MASTER {
@@ -206,10 +209,9 @@ void* psrs(void* arg) {
     long p4Elapsed = (p4End.tv_sec-p4Start.tv_sec)*1000000 + p4End.tv_usec-p4Start.tv_usec;
 
     std::cout << psrsElapsed << "," << p1Elapsed << "," <<p2Elapsed << "," << p3Elapsed << "," << p4Elapsed << std::endl;
-
     /*
     std::cout << checkSorted(dest, n) << std::endl;
-    std::cout << checkElements(dest, mlist, n) << std::endl;
+    std::cout << checkElements(dest, list, n) << std::endl;
     */
 
     free(dest);
@@ -225,8 +227,8 @@ void* psrs(void* arg) {
 int main(int argc, char* argv[]) {
   n = std::stol(argv[1]);
   p = std::stoi(argv[2]);
-  mlist = generate(n);
-
+  list = generate(n);
+  pthread_setconcurrency(p);
   w = n/(pow(p,2));
   sampleSize = n/p;
   leftOver = n%p;
