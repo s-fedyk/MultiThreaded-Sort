@@ -15,7 +15,7 @@ while ((i<$m*2**6)); do
     p4sum=0
    
     for ((y=0; y<5; y+=1)); do
-      output=$(./main $i $x)
+      output=$(./psrs $i $x)
 
       psrssum=$(($(echo "$output" | awk -F',' '{s+=$1} END {print s}')+$psrssum))
       p1sum=$(($(echo "$output" | awk -F',' '{s+=$2} END {print s}')+$p1sum))
