@@ -60,8 +60,8 @@ sample_partition* phase3(int list[], const size_t size, int pivots[], size_t p) 
   int offset = 0;
   for (size_t i = 0 ; i < p-1 ; i++) {
     partitions[i].base = &list[offset];
-    partitions[i].size = BinarySearch(list, size, pivots[i]) - offset;
-    offset = offset + partitions[i].size;
+    partitions[i].size = BinarySearch(&list[offset], size-offset, pivots[i]);
+    offset += partitions[i].size;
   }
 
   partitions[p-1].base = &list[offset];

@@ -52,6 +52,8 @@ bool testSearch() {
  * Binary search to split array into partitions
  */
 int BinarySearch(int list[], const unsigned long size, const int item) {
+  if (size <= 0) return 0;
+
   unsigned long low = 0;
   unsigned long high = size-1;
 

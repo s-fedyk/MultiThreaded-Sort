@@ -29,9 +29,12 @@ bool checkElements(int* sorted, int* original, size_t n) {
   qsort(original, n, sizeof(int), intCompare);
 
   for (int i = 0 ; i < n ; i ++) {
+
     if (sorted[i] != original[i]) {
+      std::cout << "bad sort at " << i << std::endl;
       return false;
     }
+
   }
   
   return true;
