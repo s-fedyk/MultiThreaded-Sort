@@ -14,6 +14,11 @@ while ((i<$m*2**6)); do
     p3sum=0
     p4sum=0
    
+    #warmup
+    for ((y=0; y<2; y+=1)); do
+        $(./psrs $i $x)
+    done
+
     for ((y=0; y<5; y+=1)); do
       output=$(./psrs $i $x)
 
