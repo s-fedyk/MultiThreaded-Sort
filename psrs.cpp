@@ -1,6 +1,8 @@
 #include <iostream>
 #include <queue>
 #include <sys/time.h>
+#include <cstring>
+#include <math.h>
 
 #ifdef __APPLE__
 #include "util/Barrier.h"
@@ -23,7 +25,6 @@ thread_job *jobs = nullptr;
 
 size_t p,w, sampleSize, leftOver;
 long n;
-chrono::time_point<chrono::steady_clock> start;
 
 timeval psrsStart, psrsEnd, p1Start, 
         p1End, p2Start, p2End, p3Start, 

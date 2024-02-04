@@ -1,6 +1,9 @@
 #include "Tester.h"
-#include "Comparator.h"
+
 #include <iostream>
+#include <climits>
+
+#include "Comparator.h"
 
 using namespace std;
 
