@@ -51,27 +51,19 @@ bool testSearch() {
 /**
  * Binary search to split array into partitions
  */
-int BinarySearch(int list[], const size_t size, const int item) {
-  // bandaid
-  size_t test = 0;
-  while (test < size && list[test] <= item) {
-    test++;
-  }
-  return test;
+int BinarySearch(int list[], const unsigned long size, const int item) {
+  unsigned long low = 0;
+  unsigned long high = size-1;
 
-  unsigned int low = 0;
-  unsigned int high = size-1;
-
-  unsigned int index;
-
-  while (low < high) {
-    index = (low + high)/2;
-
-    if (list[index] > item) {
-      high = index - 1;
+  while (low <= high) {
+    unsigned long index = low + (high - low) / 2;
+    if (list[index] == item) {
+        return index; // Item found at index
+    } else if (list[index] > item) {
+        high = index - 1;
     } else {
-      low = index + 1;
-    }
+        low = index + 1;
+    }  
   }
 
   return low;

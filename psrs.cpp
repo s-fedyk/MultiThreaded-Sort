@@ -10,6 +10,7 @@
 #include "util/DataTypes.h"
 #include "util/BinarySearch.h"
 #include "util/Tester.h"
+#include "util/Comparator.h"
 
 //#define DEBUG
 
@@ -23,31 +24,19 @@ pthread_t* threads;
 // global job list
 thread_job *jobs = nullptr;
 
-size_t p,w, sampleSize, leftOver;
-long n;
+size_t p,w, leftOver;
+unsigned long n, sampleSize;
 
 timeval psrsStart, psrsEnd, p1Start, 
         p1End, p2Start, p2End, p3Start, 
         p3End, p4Start, p4End;
 
-int* pivots;
+int *list, *gatheredSample, *pivots, *dest;
 
-// threads contribute to this
-int* gatheredSample;
+int* phase1(int list[], const unsigned long size, int sample[]) {
+  qsort(list, size, sizeof(int), intCompare);
 
-int *list;
-
-// where our result goes
-int* dest;
-
-int compare(const void *l, const void *r) {
-  return ( *(int*)l - *(int*)r );
-}
-
-int* phase1(int list[], const size_t size, int sample[]) {
-  qsort(list, size, sizeof(int), compare);
-
-  for (size_t i = 0 ; i < p; i++) {
+  for (unsigned long i = 0 ; i < p; i++) {
     sample[i] = list[i*w];
   }
 
@@ -55,11 +44,11 @@ int* phase1(int list[], const size_t size, int sample[]) {
 }
 
 int* phase2(int gatheredSample[], size_t p) {
-  qsort(gatheredSample, p*p, sizeof(int), compare);
+  qsort(gatheredSample, p*p, sizeof(int), intCompare);
 
   int* pivotList = new int[p-1];
 
-  for (size_t i = 0; i < p-1 ; i++) {
+  for (unsigned long i = 0; i < p-1 ; i++) {
     pivotList[i] = gatheredSample[i*p + p];
   }
 
@@ -94,7 +83,7 @@ void phase4(size_t partitionIndex) {
   jobs[partitionIndex].partitionSize = partitionSize;
   pthread_barrier_wait(&mbarrier);
 
-  size_t resultIndex = 0;
+  unsigned long resultIndex = 0;
   for (size_t threadIndex = 0 ; threadIndex < partitionIndex ; threadIndex++) {
     resultIndex += jobs[threadIndex].partitionSize;
   }
@@ -151,10 +140,10 @@ void* psrs(void* arg) {
   pthread_barrier_wait(&mbarrier);
   
   // first n%p threads will take 1 more 
-  size_t sampleAdjust = (job->index < leftOver) ? 1 : 0;
+  unsigned long sampleAdjust = (job->index < leftOver) ? 1 : 0;
 
   // adjust bounds for n%p threds
-  size_t startAdjust = (job->index < leftOver) ? job->index : leftOver;
+  unsigned long startAdjust = (job->index < leftOver) ? job->index : leftOver;
 
   phase1(&list[sampleSize * job->index + startAdjust], sampleSize + sampleAdjust, &gatheredSample[job->index * p]);
 
