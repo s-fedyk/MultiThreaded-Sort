@@ -15,7 +15,7 @@ int* generate(size_t n) {
   
   int* result = new int[n];
 
-  for (int i = 0 ; i < n ; i++) {
+  for (size_t i = 0 ; i < n ; i++) {
     result[i] = random() % INT_MAX;
   }
 

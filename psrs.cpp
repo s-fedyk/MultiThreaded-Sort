@@ -24,38 +24,36 @@ pthread_t* threads;
 // global job list
 thread_job *jobs = nullptr;
 
-size_t p,w, leftOver;
-unsigned long n, sampleSize;
+size_t p, w, leftOver, n, sampleSize;
+int *list, *gatheredSample, *pivots, *dest;
 
 timeval psrsStart, psrsEnd, p1Start, 
         p1End, p2Start, p2End, p3Start, 
         p3End, p4Start, p4End;
 
-int *list, *gatheredSample, *pivots, *dest;
-
-int* phase1(int list[], const unsigned long size, int sample[]) {
+int* phase1(int list[], const size_t& size, int sample[]) {
   qsort(list, size, sizeof(int), intCompare);
 
-  for (unsigned long i = 0 ; i < p; i++) {
+  for (size_t i = 0 ; i < p; i++) {
     sample[i] = list[i*w];
   }
 
   return sample;
 }
 
-int* phase2(int gatheredSample[], size_t p) {
+int* phase2(int gatheredSample[], const size_t& p) {
   qsort(gatheredSample, p*p, sizeof(int), intCompare);
 
   int* pivotList = new int[p-1];
 
-  for (unsigned long i = 0; i < p-1 ; i++) {
+  for (size_t i = 0; i < p-1 ; i++) {
     pivotList[i] = gatheredSample[i*p + p];
   }
 
   return pivotList;
 }
 
-sample_partition* phase3(int list[], const size_t size, int pivots[], size_t p) {
+sample_partition* phase3(int list[], const size_t& size, int pivots[], const size_t p) {
   sample_partition *partitions = new sample_partition[p];
   int offset = 0;
   for (size_t i = 0 ; i < p-1 ; i++) {
@@ -71,7 +69,7 @@ sample_partition* phase3(int list[], const size_t size, int pivots[], size_t p) 
 }
 
 // use sample partitions to merge
-void phase4(size_t partitionIndex) {
+void phase4(const size_t& partitionIndex) {
   sample_partition toMerge[p];
   size_t partitionSize = 0;
 
@@ -83,12 +81,12 @@ void phase4(size_t partitionIndex) {
   jobs[partitionIndex].partitionSize = partitionSize;
   pthread_barrier_wait(&mbarrier);
 
-  unsigned long resultIndex = 0;
+  size_t resultIndex = 0;
   for (size_t threadIndex = 0 ; threadIndex < partitionIndex ; threadIndex++) {
     resultIndex += jobs[threadIndex].partitionSize;
   }
 
-  size_t indexes[p]; // we are merging this many partitions
+  size_t indexes[p] ; // we are merging this many partitions
   memset(indexes, 0x0, p*sizeof(size_t));
 
   std::priority_queue<queue_entry, vector<queue_entry> , std::greater<queue_entry> > queue;
@@ -109,11 +107,11 @@ void phase4(size_t partitionIndex) {
 
   while (!queue.empty()) {
     dest[resultIndex] = queue.top().value;
-    size_t threadIndex = queue.top().thread;
+    const size_t threadIndex = queue.top().thread;
     queue.pop();
 
     if (toMerge[threadIndex].size > indexes[threadIndex]) {
-      int currentObservation = toMerge[threadIndex].base[indexes[threadIndex]];
+      const int currentObservation = toMerge[threadIndex].base[indexes[threadIndex]];
 
       queue_entry entry; 
       entry.value = currentObservation;
@@ -140,10 +138,10 @@ void* psrs(void* arg) {
   pthread_barrier_wait(&mbarrier);
   
   // first n%p threads will take 1 more 
-  unsigned long sampleAdjust = (job->index < leftOver) ? 1 : 0;
+  const size_t sampleAdjust = (job->index < leftOver) ? 1 : 0;
 
   // adjust bounds for n%p threds
-  unsigned long startAdjust = (job->index < leftOver) ? job->index : leftOver;
+  const size_t startAdjust = (job->index < leftOver) ? job->index : leftOver;
 
   phase1(&list[sampleSize * job->index + startAdjust], sampleSize + sampleAdjust, &gatheredSample[job->index * p]);
 
@@ -183,11 +181,11 @@ void* psrs(void* arg) {
     gettimeofday(&p4End, NULL);
     gettimeofday(&psrsEnd, NULL);
 
-    long psrsElapsed = (psrsEnd.tv_sec-psrsStart.tv_sec)*1000000 + psrsEnd.tv_usec-psrsStart.tv_usec;
-    long p1Elapsed = (p1End.tv_sec-p1Start.tv_sec)*1000000 + p1End.tv_usec-p1Start.tv_usec;
-    long p2Elapsed = (p2End.tv_sec-p2Start.tv_sec)*1000000 + p2End.tv_usec-p2Start.tv_usec;
-    long p3Elapsed = (p3End.tv_sec-p3Start.tv_sec)*1000000 + p3End.tv_usec-p3Start.tv_usec;
-    long p4Elapsed = (p4End.tv_sec-p4Start.tv_sec)*1000000 + p4End.tv_usec-p4Start.tv_usec;
+    size_t psrsElapsed = (psrsEnd.tv_sec-psrsStart.tv_sec)*1000000 + psrsEnd.tv_usec-psrsStart.tv_usec;
+    size_t p1Elapsed = (p1End.tv_sec-p1Start.tv_sec)*1000000 + p1End.tv_usec-p1Start.tv_usec;
+    size_t p2Elapsed = (p2End.tv_sec-p2Start.tv_sec)*1000000 + p2End.tv_usec-p2Start.tv_usec;
+    size_t p3Elapsed = (p3End.tv_sec-p3Start.tv_sec)*1000000 + p3End.tv_usec-p3Start.tv_usec;
+    size_t p4Elapsed = (p4End.tv_sec-p4Start.tv_sec)*1000000 + p4End.tv_usec-p4Start.tv_usec;
 
     std::cout << psrsElapsed << "," << p1Elapsed << "," <<p2Elapsed << "," << p3Elapsed << "," << p4Elapsed << std::endl;
 
@@ -208,8 +206,10 @@ void* psrs(void* arg) {
 int main(int argc, char* argv[]) {
   n = std::stol(argv[1]);
   p = std::stoi(argv[2]);
-  list = generate(n);
+
   pthread_setconcurrency(p);
+
+  list = generate(n);
   w = n/(pow(p,2));
   sampleSize = n/p;
   leftOver = n%p;

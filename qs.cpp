@@ -15,7 +15,7 @@ int compare(const void *l, const void *r) {
 }
 
 int main(int argc, char* argv[]) {
-  int n = std::stoi(argv[1]);
+  size_t n = std::stoi(argv[1]);
   list = generate(n);
 
   gettimeofday(&qsStart, NULL);
