@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
   qsort(list, n, sizeof(int), compare);
   gettimeofday(&qsEnd, NULL);
 
-  long elapsed = (qsEnd.tv_sec-qsStart.tv_sec)*1000000 + qsEnd.tv_usec-qsStart.tv_usec;
+  size_t elapsed = (qsEnd.tv_sec-qsStart.tv_sec)*1000000 + qsEnd.tv_usec-qsStart.tv_usec;
   std::cout << elapsed<< "\n";
  
   return 1;
