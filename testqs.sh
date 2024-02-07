@@ -1,5 +1,5 @@
 #!/bin/bash
-m=4096000000
+m=512000000
 i=$m
 rm -rf "./qsresults"
 mkdir "qsresults"
